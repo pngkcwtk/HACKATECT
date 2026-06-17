@@ -1,6 +1,7 @@
 # hackatec
 
 JSON ที่ส่งจะถูกพิมพ์ใน Browser DevTools Console ด้วยคำสั่งในโค้ด:
+
 console.log('ข้อมูลที่ส่งต่อระบบภายใน:', payload);
 
 วิธีดู:
