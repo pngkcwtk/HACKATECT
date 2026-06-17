@@ -1,0 +1,249 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welfare Gap Finder | ระบบค้นหาช่องว่างสวัสดิการ</title>
+  <script src="js/thai-address-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body class="min-h-screen text-slate-800">
+  <div class="flex min-h-screen">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full border-r border-slate-200 bg-white transition-transform duration-200 lg:static lg:translate-x-0">
+      <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
+        <div class="grid h-10 w-10 place-items-center rounded-lg bg-mso-primary text-sm font-black text-white">WGF</div>
+        <div>
+          <p class="text-sm font-black text-mso-primary">Welfare Gap Finder</p>
+          <p class="text-xs text-slate-500">แพลตฟอร์มผู้ช่วยเจ้าหน้าที่</p>
+        </div>
+      </div>
+      <nav class="space-y-2 p-4">
+        <button class="nav-link nav-active flex w-full items-center gap-3 rounded-lg border border-transparent px-4 py-3 text-left text-sm font-bold transition hover:bg-slate-50" data-page="dashboardPage">
+          <span>แดชบอร์ด</span>
+        </button>
+        <button class="nav-link flex w-full items-center gap-3 rounded-lg border border-transparent px-4 py-3 text-left text-sm font-bold transition hover:bg-slate-50" data-page="newCasePage">
+          <span>บันทึกเคสใหม่</span>
+        </button>
+      </nav>
+      <div class="mx-4 mt-4 rounded-lg border border-blue-100 bg-blue-50 p-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-mso-secondary">ขั้นตอนการทำงาน</p>
+        <p class="mt-2 text-sm leading-6 text-mso-primary">กรอกข้อมูลประชาชน ตรวจสอบความครบถ้วน และส่งข้อมูลให้หน่วยงานดำเนินการต่อ</p>
+      </div>
+    </aside>
+
+    <div id="mobileOverlay" class="fixed inset-0 z-30 hidden bg-slate-900/35 lg:hidden"></div>
+
+    <main class="flex min-h-screen flex-1 flex-col">
+      <header class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:px-8">
+        <div class="flex items-center gap-3">
+          <button id="menuButton" class="rounded-lg border border-slate-200 p-2 text-mso-primary lg:hidden" aria-label="เปิดเมนู">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div>
+            <h1 class="text-base font-black text-mso-primary sm:text-xl">Welfare Gap Finder</h1>
+            <p class="hidden text-xs text-slate-500 sm:block">พื้นที่บันทึกข้อมูลประชาชนสำหรับเจ้าหน้าที่บริการหน้าเคาน์เตอร์</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="relative rounded-lg border border-slate-200 p-2 text-mso-primary" aria-label="การแจ้งเตือน">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-mso-danger"></span>
+          </button>
+          <div class="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <div class="grid h-8 w-8 place-items-center rounded-full bg-mso-primary text-xs font-black text-white">OP</div>
+            <div class="hidden sm:block">
+              <p class="text-xs font-bold text-slate-800">โปรไฟล์เจ้าหน้าที่</p>
+              <p class="text-[11px] text-slate-500">หน่วยรับเรื่องสวัสดิการ</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="flex-1 p-4 lg:p-8">
+        <div id="dashboardPage" class="page active">
+          <div class="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <p class="text-sm font-bold text-mso-secondary">แดชบอร์ดปฏิบัติงาน</p>
+              <h2 class="mt-1 text-2xl font-black text-mso-primary">ภาพรวมเคสสวัสดิการประชาชน</h2>
+            </div>
+            <button class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft transition hover:bg-slate-800" onclick="showPage('newCasePage')">สร้างเคสใหม่</button>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft"><p class="text-sm font-bold text-slate-500">เคสทั้งหมด</p><p id="totalCasesStat" class="mt-3 text-3xl font-black text-mso-primary">1,248</p><p class="mt-2 text-xs text-mso-success">+12% เดือนนี้</p></div>
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft"><p class="text-sm font-bold text-slate-500">เคสใหม่</p><p id="newCasesStat" class="mt-3 text-3xl font-black text-mso-primary">36</p><p class="mt-2 text-xs text-mso-secondary">วันนี้</p></div>
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft"><p class="text-sm font-bold text-slate-500">รอตรวจสอบ</p><p id="pendingCasesStat" class="mt-3 text-3xl font-black text-mso-primary">89</p><p class="mt-2 text-xs text-mso-warning">ต้องให้เจ้าหน้าที่ตรวจสอบ</p></div>
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft"><p class="text-sm font-bold text-slate-500">เคสที่เสร็จสิ้น</p><p id="completedCasesStat" class="mt-3 text-3xl font-black text-mso-primary">1,123</p><p class="mt-2 text-xs text-mso-success">ดำเนินการเสร็จสิ้น</p></div>
+          </div>
+          <div class="mt-6 rounded-lg border border-slate-200 bg-white shadow-soft">
+            <div class="flex flex-col gap-2 border-b border-slate-200 p-5 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 class="text-lg font-black text-mso-primary">เคสล่าสุด</h3>
+                <p class="mt-1 text-sm text-slate-500">คลิกแถวเพื่อดูประเด็นที่ควรติดตามต่อ</p>
+              </div>
+              <button type="button" id="toggleCaseInsightBtn" class="self-start rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-mso-primary transition hover:bg-slate-50 md:self-auto">ซ่อนรายละเอียด</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[720px] text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr><th class="px-5 py-3">ชื่อ</th><th class="px-5 py-3">อายุ</th><th class="px-5 py-3">จังหวัด</th><th class="px-5 py-3">สถานะ</th><th class="px-5 py-3">อัปเดตล่าสุด</th></tr>
+                </thead>
+                <tbody id="recentCasesBody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+            <div id="caseInsightPanel" class="border-t border-slate-200 bg-slate-50 p-5"></div>
+          </div>
+        </div>
+
+        <div id="newCasePage" class="page">
+          <div class="mb-6 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+            <div>
+              <p class="text-sm font-bold text-mso-secondary">รับข้อมูลเคสใหม่</p>
+              <h2 class="mt-1 text-2xl font-black text-mso-primary">แบบฟอร์มบันทึกข้อมูลประชาชน</h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-mso-primary hover:bg-slate-50" onclick="showPage('dashboardPage')">กลับ</button>
+            </div>
+          </div>
+          <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
+              <p class="text-sm font-black text-mso-primary">ความคืบหน้าการกรอกข้อมูล</p>
+              <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div id="progressBar" class="h-full rounded-full bg-mso-secondary transition-all" style="width: 14%"></div></div>
+              <p id="stepIndicator" class="mt-3 text-sm font-bold text-slate-600">ขั้นตอนที่ 1 จาก 7</p>
+              <ol id="stepList" class="mt-5 space-y-3 text-sm"></ol>
+            </div>
+
+            <form id="caseForm" class="rounded-lg border border-slate-200 bg-white shadow-soft" novalidate>
+              <div class="wizard-step active p-5 lg:p-7" data-step="1">
+                <h3 class="text-xl font-black text-mso-primary">ข้อมูลส่วนบุคคล</h3>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="block"><span class="text-sm font-bold">ชื่อ</span><input name="firstName" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">นามสกุล</span><input name="lastName" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">เลขบัตรประชาชน</span><input name="citizenId" required maxlength="13" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">วันเกิด</span><input name="dateOfBirth" type="date" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">อายุ</span><input name="age" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">เบอร์โทรศัพท์</span><input name="phone" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                </div>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="2">
+                <h3 class="text-xl font-black text-mso-primary">ข้อมูลที่อยู่</h3>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="block"><span class="text-sm font-bold">จังหวัด</span><select name="province" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
+                  <label class="block"><span class="text-sm font-bold">อำเภอ/เขต</span><select name="district" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
+                  <label class="block"><span class="text-sm font-bold">ตำบล/แขวง</span><select name="subdistrict" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
+                  <label class="block"><span class="text-sm font-bold">รหัสไปรษณีย์</span><input name="postalCode" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block md:col-span-2"><span class="text-sm font-bold">ที่อยู่เต็ม (ไม่บังคับ)</span><textarea name="fullAddress" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></textarea></label>
+                </div>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="3">
+                <h3 class="text-xl font-black text-mso-primary">ข้อมูลครัวเรือน</h3>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="block"><span class="text-sm font-bold">จำนวนสมาชิกในครัวเรือน</span><input name="householdMembers" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">จำนวนผู้สูงอายุ</span><input name="elderlyCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">จำนวนเด็ก</span><input name="childrenCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">จำนวนผู้พิการ</span><input name="disabledCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                </div>
+                <div class="mt-6">
+                  <p class="text-sm font-bold">ลักษณะการอยู่อาศัย</p>
+                  <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="livingArrangement" value="Living Alone" required /> <span class="ml-2 font-bold">อยู่ลำพัง</span></label>
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="livingArrangement" value="Family" /> <span class="ml-2 font-bold">ครอบครัว</span></label>
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="livingArrangement" value="Relatives" /> <span class="ml-2 font-bold">ญาติ</span></label>
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="livingArrangement" value="Other" /> <span class="ml-2 font-bold">อื่น ๆ</span></label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="4">
+                <h3 class="text-xl font-black text-mso-primary">ข้อมูลเศรษฐกิจ</h3>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="block md:col-span-2"><span class="text-sm font-bold">อาชีพ</span><select name="occupation" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
+                  <label class="block"><span class="text-sm font-bold">รายได้ต่อเดือน</span><input name="monthlyIncome" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">รายจ่ายต่อเดือน</span><input name="monthlyExpense" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                </div>
+                <div class="mt-6">
+                  <p class="text-sm font-bold">สถานะการจ้างงาน</p>
+                  <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="employmentStatus" value="Employed" required /> <span class="ml-2 font-bold">มีงานทำ</span></label>
+                    <label class="rounded-lg border border-slate-200 p-4"><input type="radio" name="employmentStatus" value="Unemployed" /> <span class="ml-2 font-bold">ว่างงาน</span></label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="5">
+                <h3 class="text-xl font-black text-mso-primary">กลุ่มเปราะบาง</h3>
+                <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Elderly" /> <span class="ml-2 font-bold">ผู้สูงอายุ</span></label>
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Disabled" /> <span class="ml-2 font-bold">ผู้พิการ</span></label>
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Bedridden" /> <span class="ml-2 font-bold">ผู้ป่วยติดเตียง</span></label>
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Newborn" /> <span class="ml-2 font-bold">เด็กแรกเกิด</span></label>
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Low Income" /> <span class="ml-2 font-bold">รายได้น้อย</span></label>
+                  <label class="rounded-lg border border-slate-200 p-4"><input type="checkbox" name="vulnerableGroups" value="Unemployed" /> <span class="ml-2 font-bold">ว่างงาน</span></label>
+                </div>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="6">
+                <h3 class="text-xl font-black text-mso-primary">บันทึกเจ้าหน้าที่</h3>
+                <label class="mt-6 block"><span class="text-sm font-bold">ข้อสังเกตของเคส</span><textarea name="caseNotes" required rows="9" placeholder="ระบุสภาพความเป็นอยู่ ปัญหาที่พบ ความต้องการช่วยเหลือ และข้อสังเกตของเจ้าหน้าที่" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></textarea></label>
+                <p class="mt-2 text-xs text-slate-500">บันทึกที่ละเอียดช่วยให้หน่วยงานปลายทางพิจารณาความช่วยเหลือได้เร็วขึ้น</p>
+              </div>
+
+              <div class="wizard-step p-5 lg:p-7" data-step="7">
+                <h3 class="text-xl font-black text-mso-primary">ตรวจสอบข้อมูลก่อนส่ง</h3>
+                <div class="mt-6 grid gap-5 xl:grid-cols-2">
+                  <div class="rounded-lg border border-slate-200 p-5">
+                    <h4 class="font-black text-mso-primary">ความครบถ้วนของข้อมูล</h4>
+                    <div id="completenessList" class="mt-4 space-y-3 text-sm"></div>
+                  </div>
+                  <div class="rounded-lg border border-slate-200 p-5">
+                    <h4 class="font-black text-mso-primary">คะแนนความครบถ้วน</h4>
+                    <p id="readinessScore" class="mt-4 text-4xl font-black text-mso-primary">0 / 100</p>
+                    <p id="readinessStatus" class="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-sm font-bold text-mso-primary">ร่าง</p>
+                  </div>
+                  <div class="rounded-lg border border-slate-200 p-5">
+                    <h4 class="font-black text-mso-primary">ประเด็นสำคัญของเคส</h4>
+                    <div id="keywordTags" class="mt-4 flex flex-wrap gap-2"></div>
+                  </div>
+                  <div class="rounded-lg border border-slate-200 p-5 xl:col-span-2">
+                    <h4 class="font-black text-mso-primary">สรุปเคสเบื้องต้น</h4>
+                    <p id="caseSummary" class="mt-4 leading-7 text-slate-700"></p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col-reverse gap-3 border-t border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <button type="button" id="prevBtn" class="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-mso-primary hover:bg-slate-50">ก่อนหน้า</button>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                  <button type="button" id="nextBtn" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-slate-800">ถัดไป</button>
+                  <button type="button" id="sendBtn" class="hidden rounded-lg bg-mso-success px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-green-600">ส่งข้อมูล</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="successModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 p-4">
+    <div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-soft">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-bold text-mso-success">สำเร็จ</p>
+          <h3 class="mt-1 text-xl font-black text-mso-primary">ส่งข้อมูลเรียบร้อยแล้ว</h3>
+          <p class="mt-2 text-sm leading-6 text-slate-600">สามารถรับเรื่องถัดไปได้ทันที</p>
+        </div>
+        <button id="closeModal" class="rounded-lg border border-slate-200 p-2 text-slate-500" aria-label="ปิดหน้าต่าง">x</button>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button id="finishSubmitBtn" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft">เสร็จสิ้น</button>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
