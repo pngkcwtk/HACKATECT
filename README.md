@@ -1,4 +1,4 @@
-# hackatec
+# HACKATECT
 
 JSON ที่ส่งจะถูกพิมพ์ใน Browser DevTools Console ด้วยคำสั่งในโค้ด:
 
