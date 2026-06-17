@@ -3,7 +3,7 @@ from playwright.sync_api import sync_playwright
 
 
 
-def scrap_welfare(citizen_id: str):
+def scrape_welfare(citizen_id: str):
     print(f"🤖 Agent สั่งงาน: กำลังเริ่มขูดข้อมูลสำหรับเลขบัตร {citizen_id}...")
     
     with sync_playwright() as p:
@@ -44,4 +44,4 @@ def scrap_welfare(citizen_id: str):
 if __name__ == "__main__":
     # จำลองเลขบัตรมั่ว ๆ เพื่อดูว่าบอทเปิดหน้าจอและพิมพ์ให้จริงไหม
     mock_citizen_id = "1210101147372" # 
-    scrap_welfare(mock_citizen_id)
+    scrape_welfare(mock_citizen_id)
