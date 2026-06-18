@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welfare Gap Finder | ระบบค้นหาช่องว่างสวัสดิการ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/thai-address-data.js"></script>
   <script src="js/app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
@@ -228,11 +228,10 @@
     </main>
   </div>
 
-  <!-- ── Result Modal: แสดงผล Pipeline ── -->
+  <!-- ── Result Modal ── -->
   <div id="resultModal" class="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/60 p-4 py-8">
     <div class="w-full max-w-3xl rounded-xl bg-slate-50 shadow-soft">
 
-      <!-- Header -->
       <div class="flex items-start justify-between gap-4 rounded-t-xl bg-mso-primary p-6">
         <div>
           <p class="text-sm font-bold text-blue-200">ผลการวิเคราะห์สวัสดิการ</p>
@@ -244,25 +243,31 @@
 
       <div class="space-y-5 p-6">
 
-        <!-- Benefit Analysis -->
+        <!-- สิทธิ์ที่มีอยู่แล้ว -->
+        <section id="resultAlreadyHaveSection">
+          <h4 class="text-sm font-black uppercase tracking-wide text-mso-success">✅ สิทธิ์ที่มีอยู่แล้ว (ยืนยันจากระบบราชการ)</h4>
+          <div id="resultAlreadyHave" class="mt-3 space-y-2"></div>
+        </section>
+
+        <!-- สิทธิ์ใหม่ที่แนะนำ -->
         <section>
-          <h4 class="text-sm font-black uppercase tracking-wide text-mso-secondary">📊 วิเคราะห์ความคุ้มค่า (Expected Value)</h4>
+          <h4 class="text-sm font-black uppercase tracking-wide text-mso-secondary">📊 สิทธิ์ที่แนะนำเพิ่ม — Expected Value</h4>
           <div id="resultBenefitAnalysis" class="mt-3 space-y-3"></div>
         </section>
 
-        <!-- Next Steps -->
+        <!-- ขั้นตอน -->
         <section>
           <h4 class="text-sm font-black uppercase tracking-wide text-mso-secondary">🗂️ ขั้นตอนการดำเนินการแต่ละสิทธิ์</h4>
           <div id="resultNextSteps" class="mt-3 space-y-3"></div>
         </section>
 
-        <!-- Decision Note -->
+        <!-- คำแนะนำ -->
         <section class="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <p class="text-xs font-black uppercase tracking-wide text-mso-secondary">💡 คำแนะนำในการตัดสินใจ</p>
           <p id="resultDecisionNote" class="mt-2 text-sm leading-6 text-slate-700"></p>
         </section>
 
-        <!-- Summary -->
+        <!-- สรุป -->
         <section class="rounded-lg border border-slate-200 bg-white p-4">
           <p class="text-xs font-black uppercase tracking-wide text-slate-500">📝 บทสรุปสำหรับเจ้าหน้าที่</p>
           <p id="resultSummaryText" class="mt-2 text-sm leading-6 text-slate-700"></p>

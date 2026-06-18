@@ -563,75 +563,119 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // ส่งข้อมูลไป FastAPI backend และแสดงผลลัพธ์ Multi-Agent Pipeline
       async function submitCase(payload) {
-        // แสดง loading state บนปุ่มส่ง
         const sendBtn = document.getElementById('sendBtn');
-        const originalText = sendBtn.textContent;
+        const origText = sendBtn.textContent;
         sendBtn.disabled = true;
         sendBtn.textContent = '⏳ กำลังวิเคราะห์สิทธิ์...';
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+          const res = await fetch(`${API_BASE_URL}/api/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
-
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.detail || `Server error ${response.status}`);
+          if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.detail || `Server error ${res.status}`);
           }
+          const result = await res.json();
+          if (!result.success || !result.data) throw new Error('ได้รับข้อมูลไม่ครบถ้วนจากเซิร์ฟเวอร์');
 
-          const result = await response.json();
+          // ── อัปเดต recentCases และ stats ──
+          const pi = payload.citizen_profile.personal_information;
+          const today = new Date();
+          const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+          recentCases.unshift({
+            name: `${pi.first_name} ${pi.last_name}`.trim(),
+            age: pi.age,
+            province: payload.citizen_profile.address_information.province,
+            district: payload.citizen_profile.address_information.district,
+            subdistrict: payload.citizen_profile.address_information.subdistrict,
+            postalCode: payload.citizen_profile.address_information.postal_code,
+            status: 'รอตรวจสอบ',
+            updated: `${today.getDate()} ${thMonths[today.getMonth()]} ${today.getFullYear()+543}`,
+            occupation: payload.citizen_profile.economic_information.occupation,
+            monthlyIncome: payload.citizen_profile.economic_information.monthly_income,
+            monthlyExpense: payload.citizen_profile.economic_information.monthly_expense,
+            householdMembers: payload.citizen_profile.household_information.household_members,
+            elderlyCount: payload.citizen_profile.household_information.elderly,
+            childrenCount: payload.citizen_profile.household_information.children,
+            disabledCount: payload.citizen_profile.household_information.disabled_persons,
+            livingArrangement: payload.citizen_profile.household_information.living_arrangement,
+            employmentStatus: payload.citizen_profile.economic_information.employment_status,
+            vulnerableGroups: payload.citizen_profile.vulnerable_groups,
+            gapSummary: result.data.summary_text || 'รอผลการวิเคราะห์',
+            followUps: result.data.recommended_actions || [],
+          });
+          baseStats.newCases++;
+          baseStats.totalCases++;
+          baseStats.pendingCases++;
+          selectedRecentCaseIndex = 0;
 
-          if (!result.success || !result.data) {
-            throw new Error('ได้รับข้อมูลไม่ครบถ้วนจากเซิร์ฟเวอร์');
-          }
-
-          // รีเซ็ตฟอร์มแล้วแสดงผลลัพธ์
           form.reset();
           populateStaticDropdowns();
           currentStep = 1;
           updateWizard();
           showResultModal(result.data);
 
-        } catch (error) {
-          console.error('submitCase error:', error);
-          showErrorModal(error.message);
+        } catch (err) {
+          console.error('submitCase error:', err);
+          showErrorModal(err.message);
         } finally {
           sendBtn.disabled = false;
-          sendBtn.textContent = originalText;
+          sendBtn.textContent = origText;
         }
       }
 
       // เผื่อระบบภายนอกหรือ console ต้องเรียกส่งข้อมูลซ้ำระหว่าง demo
       window.submitCase = submitCase;
 
-      // ── แสดง modal ผลลัพธ์ Pipeline ──
+      // ── แสดง result modal พร้อมสิทธิ์ที่มีแล้วและสิทธิ์ที่แนะนำใหม่ ──
       function showResultModal(data) {
-        const modal = document.getElementById('resultModal');
-
         // Header
-        document.getElementById('resultName').textContent = data.citizen_name || '';
+        document.getElementById('resultName').textContent   = data.citizen_name || '';
         document.getElementById('resultStatus').textContent = data.status || '';
 
-        // Benefit analysis cards
-        const analysisContainer = document.getElementById('resultBenefitAnalysis');
+        // ── สิทธิ์ที่มีอยู่แล้ว (จาก scraping) — แสดงเสมอ ──
+        const alreadySec = document.getElementById('resultAlreadyHaveSection');
+        const alreadyEl  = document.getElementById('resultAlreadyHave');
+        const already    = data.already_have_summary || [];
+        alreadySec.classList.remove('hidden');
+        const srcMap = { eSocial:'e-Social Welfare', HealthcareRights:'สิทธิ์รักษาพยาบาล', StateWelfare:'สวัสดิการแห่งรัฐ' };
+        if (already.length > 0) {
+          alreadyEl.innerHTML = already.map(s => `
+            <div class="flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="text-green-600 font-black">✓</span>
+                <span class="font-bold text-slate-800">${s.benefit_name}</span>
+              </div>
+              <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">${srcMap[s.source] || s.source}</span>
+            </div>`).join('');
+        } else {
+          alreadyEl.innerHTML = `
+            <div class="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <span class="text-slate-400 text-lg">—</span>
+              <span class="text-sm text-slate-500">ไม่พบสิทธิ์ที่มีอยู่แล้วในระบบ</span>
+            </div>`;
+        }
+
+        // ── สิทธิ์ใหม่ที่แนะนำ + EV ──
+        const analysisEl = document.getElementById('resultBenefitAnalysis');
         if (data.benefit_analysis && data.benefit_analysis.length > 0) {
-          // เรียงจาก recommendation_score สูงสุด
-          const sorted = [...data.benefit_analysis].sort((a, b) => b.recommendation_score - a.recommendation_score);
-          analysisContainer.innerHTML = sorted.map((b, i) => {
-            const scoreColor = b.recommendation_score >= 8 ? 'text-green-600' : b.recommendation_score >= 5 ? 'text-amber-600' : 'text-slate-500';
+          const sorted = [...data.benefit_analysis].sort((a,b) => b.recommendation_score - a.recommendation_score);
+          analysisEl.innerHTML = sorted.map((b, i) => {
+            const scoreColor  = b.recommendation_score >= 8 ? 'text-green-600' : b.recommendation_score >= 5 ? 'text-amber-500' : 'text-slate-400';
             const chanceBadge = b.eligibility_label === 'สูงมาก' ? 'bg-green-50 text-green-700' :
-                                b.eligibility_label === 'สูง'    ? 'bg-blue-50 text-blue-700' :
-                                b.eligibility_label === 'ปานกลาง'? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600';
-            const pros  = (b.pros  || []).map(p => `<li class="flex gap-2"><span class="text-green-500 shrink-0">✓</span>${p}</li>`).join('');
-            const cons  = (b.cons  || []).map(c => `<li class="flex gap-2"><span class="text-amber-500 shrink-0">⚠</span>${c}</li>`).join('');
-            const docs  = (b.required_documents || []).map(d => `<span class="rounded bg-slate-100 px-2 py-0.5 text-xs">${d}</span>`).join('');
+                                b.eligibility_label === 'สูง'    ? 'bg-blue-50 text-blue-700'  :
+                                b.eligibility_label === 'ปานกลาง'? 'bg-amber-50 text-amber-700': 'bg-slate-100 text-slate-600';
+            const pros = (b.pros || []).map(p => `<li class="flex gap-2"><span class="text-green-500 shrink-0">✓</span>${p}</li>`).join('');
+            const cons = (b.cons || []).map(c => `<li class="flex gap-2"><span class="text-amber-500 shrink-0">⚠</span>${c}</li>`).join('');
+            const docs = (b.required_documents || []).map(d => `<span class="rounded bg-slate-100 px-2 py-0.5 text-xs">${d}</span>`).join('');
             return `
               <div class="rounded-lg border border-slate-200 bg-white p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div>
-                    <p class="font-black text-mso-primary">${i + 1}. ${b.benefit_name}</p>
+                    <p class="font-black text-mso-primary">${i+1}. ${b.benefit_name}</p>
                     <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${chanceBadge}">${b.eligibility_label} (${b.eligibility_pct}%)</span>
                   </div>
                   <div class="text-right shrink-0">
@@ -650,31 +694,31 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>`;
           }).join('');
         } else {
-          analysisContainer.innerHTML = '<p class="text-sm text-slate-500">ไม่พบสิทธิ์ใหม่ที่แนะนำ</p>';
+          analysisEl.innerHTML = '<p class="text-sm text-slate-500">ไม่พบสิทธิ์ใหม่ที่แนะนำ</p>';
         }
 
-        // Next steps
-        const stepsContainer = document.getElementById('resultNextSteps');
+        // ── ขั้นตอนการดำเนินการ ──
+        const stepsEl = document.getElementById('resultNextSteps');
         if (data.next_steps && data.next_steps.length > 0) {
-          stepsContainer.innerHTML = data.next_steps.map(ns => `
+          stepsEl.innerHTML = data.next_steps.map(ns => `
             <div class="rounded-lg border border-slate-200 bg-white p-4">
               <p class="font-black text-mso-primary">📌 ${ns.benefit_name}</p>
               <ol class="mt-3 space-y-2 text-sm text-slate-700 list-none">
-                ${(ns.steps || []).map((s, i) => `
+                ${(ns.steps||[]).map((s,i) => `
                   <li class="flex gap-3">
-                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-mso-primary text-xs font-black text-white">${i + 1}</span>
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-mso-primary text-xs font-black text-white">${i+1}</span>
                     <span class="pt-0.5">${s}</span>
                   </li>`).join('')}
               </ol>
             </div>`).join('');
         } else {
-          stepsContainer.innerHTML = '<p class="text-sm text-slate-500">ไม่มีขั้นตอนเพิ่มเติม</p>';
+          stepsEl.innerHTML = '<p class="text-sm text-slate-500">ไม่มีขั้นตอนเพิ่มเติม</p>';
         }
 
-        // Decision note + summary
         document.getElementById('resultDecisionNote').textContent = data.decision_note || '';
         document.getElementById('resultSummaryText').textContent  = data.summary_text  || '';
 
+        const modal = document.getElementById('resultModal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
       }
@@ -722,14 +766,14 @@ document.addEventListener('DOMContentLoaded', () => {
         submitCase(buildPayload());
       });
 
-      // ปุ่มปิด modal ผลลัพธ์ (result modal)
+      // ── ปุ่มปิด result modal ──
       function closeResultModal() {
-        document.getElementById('resultModal').classList.add('hidden');
-        document.getElementById('resultModal').classList.remove('flex');
+        const m = document.getElementById('resultModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
       }
       function closeErrorModal() {
-        document.getElementById('errorModal').classList.add('hidden');
-        document.getElementById('errorModal').classList.remove('flex');
+        const m = document.getElementById('errorModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
       }
       window.closeResultModal = closeResultModal;
       window.closeErrorModal  = closeErrorModal;
