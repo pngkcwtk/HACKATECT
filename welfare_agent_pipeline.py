@@ -113,10 +113,19 @@ ALL_POLICIES: List[Dict[str, Any]] = [
 
 # ประวัติสิทธิ์ของแต่ละ Citizen ID
 MOCK_CITIZEN_BENEFITS_DB: Dict[str, List[Dict[str, Any]]] = {
+    # สมชาย — ผู้สูงอายุ: มีเบี้ยยังชีพอยู่แล้ว, บัตรสวัสดิการหมดอายุ
     "1234567890123": [
         {"benefit_name": "เบี้ยยังชีพผู้สูงอายุ",  "status": "Active",  "approved_date": "2025-01-10"},
         {"benefit_name": "บัตรสวัสดิการแห่งรัฐ",   "status": "Expired", "approved_date": "2024-01-01"},
-    ]
+    ],
+    # มานี — ผู้สูงอายุพิการ รายได้น้อย: ไม่เคยได้รับสิทธิ์ใดเลย → เห็นหลายสิทธิ์
+    "9876543210987": [],
+    # สมศรี — มีบางสิทธิ์อยู่แล้ว ทดสอบ overlap กับหลายรายการ
+    "1111111111111": [
+        {"benefit_name": "สิทธิหลักประกันสุขภาพแห่งชาติ", "status": "Active",  "approved_date": "2023-05-01"},
+        {"benefit_name": "เบี้ยความพิการ",                 "status": "Active",  "approved_date": "2024-03-15"},
+        {"benefit_name": "บัตรสวัสดิการแห่งรัฐ",           "status": "Expired", "approved_date": "2023-01-01"},
+    ],
 }
 
 # ---------------------------------------------------------------------------
@@ -155,24 +164,44 @@ class Agent2Output(BaseModel):
 
 
 class BenefitValueScore(BaseModel):
-    """การวิเคราะห์ความคุ้มค่าของสวัสดิการแต่ละรายการ"""
+    """
+    การวิเคราะห์ความคุ้มค่าของสวัสดิการแต่ละรายการ
+
+    Expected Value = eligibility_pct (%) x value_baht (บาท/เดือน) / 100
+    recommendation_score = 1-10 derive จาก EV เทียบกับสิทธิ์อื่นในรายการ
+    """
     benefit_name:         str
-    category:             str = ""
-    eligibility_chance:   str = Field(description="โอกาสที่จะได้รับสิทธิ์ เช่น สูงมาก / ปานกลาง / ต่ำ")
-    estimated_value:      str = Field(description="มูลค่าโดยประมาณที่จะได้รับ เช่น 600-1,000 บาท/เดือน")
-    pros:                 List[str] = Field(default=[], description="ข้อดีของสิทธิ์นี้")
-    cons:                 List[str] = Field(default=[], description="ข้อจำกัดหรือเงื่อนไขที่ต้องระวัง")
+    category:             str   = ""
+    # --- องค์ประกอบของ Expected Value ---
+    eligibility_pct:      float = Field(description="โอกาสได้รับสิทธิ์ เป็น % เช่น 90.0")
+    eligibility_label:    str   = Field(description="ป้ายโอกาส: สูงมาก / สูง / ปานกลาง / ต่ำ")
+    value_baht:           float = Field(description="มูลค่าโดยประมาณ บาท/เดือน (ค่ากลางถ้าเป็นช่วง)")
+    value_label:          str   = Field(description="มูลค่าแบบอ่านง่าย เช่น 600-1,000 บาท/เดือน")
+    # --- Expected Value ---
+    expected_value_baht:  float = Field(description="EV = eligibility_pct/100 x value_baht")
+    expected_value_label: str   = Field(description="EV อ่านง่าย เช่น ~810 บาท/เดือน (90% x 900)")
+    # --- ข้อมูลประกอบ ---
+    pros:                 List[str] = Field(default=[], description="ข้อดี 2-3 ข้อ")
+    cons:                 List[str] = Field(default=[], description="ข้อจำกัด 1-2 ข้อ")
     required_documents:   List[str] = Field(default=[], description="เอกสารที่ต้องเตรียม")
-    recommendation_score: int       = Field(description="คะแนนแนะนำ 1-10 (10 = แนะนำมากที่สุด)")
+    # --- คะแนนแนะนำ derive จาก EV ---
+    recommendation_score: int = Field(description="คะแนน 1-10 จาก EV เทียบกับสิทธิ์อื่น (10 = EV สูงสุด)")
+
+
+class FinalRecommendationStep(BaseModel):
+    """ขั้นตอนการดำเนินการสำหรับสิทธิ์แต่ละรายการ"""
+    benefit_name: str
+    steps:        List[str] = Field(description="ขั้นตอนการสมัครหรือดำเนินการ เรียงลำดับ")
 
 
 class FinalSummaryOutput(BaseModel):
-    citizen_name:      str
-    status:            str        = Field(description="สรุปสถานะ เช่น 'แนะนำสิทธิ์เพิ่มเติม'")
-    benefit_analysis:  List[BenefitValueScore] = Field(default=[], description="วิเคราะห์ความคุ้มค่าแต่ละสิทธิ์")
-    recommended_actions: List[str] = Field(default=[], description="สิ่งที่เจ้าหน้าที่ต้องดำเนินการต่อ")
-    summary_text:      str        = Field(description="บทสรุปภาษาไทยสำหรับเจ้าหน้าที่")
-    decision_note:     str        = Field(default="", description="หมายเหตุสำหรับผู้รับบริการในการตัดสินใจเลือกสิทธิ์")
+    citizen_name:        str
+    status:              str = Field(description="สรุปสถานะ เช่น 'แนะนำสิทธิ์เพิ่มเติม'")
+    benefit_analysis:    List[BenefitValueScore] = Field(default=[], description="วิเคราะห์ความคุ้มค่าแต่ละสิทธิ์ เรียงจาก EV สูงสุดไปต่ำสุด")
+    next_steps:          List[FinalRecommendationStep] = Field(default=[], description="ขั้นตอนการดำเนินการแยกตามแต่ละสิทธิ์ที่แนะนำ")
+    recommended_actions: List[str] = Field(default=[], description="สิ่งที่เจ้าหน้าที่ต้องดำเนินการต่อ (ภาพรวม)")
+    summary_text:        str = Field(description="บทสรุปภาษาไทยสำหรับเจ้าหน้าที่")
+    decision_note:       str = Field(default="", description="หมายเหตุสำหรับผู้รับบริการในการตัดสินใจเลือกสิทธิ์")
 
 # ---------------------------------------------------------------------------
 # 4. RAG ENGINE — TF-IDF + Cosine Similarity (ไม่ต้องเรียก API ภายนอก)
@@ -534,14 +563,24 @@ def run_agent_3_summary_with_value(ui_data: Dict[str, Any], agent2_result: Agent
 
 คำสั่ง:
 1. สรุปภาพรวมสถานการณ์สวัสดิการของผู้ลงทะเบียน
-2. วิเคราะห์ความคุ้มค่าของสิทธิ์ใหม่แต่ละรายการ ได้แก่:
-   - eligibility_chance: โอกาสที่จะผ่านเกณฑ์ (สูงมาก/สูง/ปานกลาง/ต่ำ)
-   - estimated_value: มูลค่าที่คาดว่าจะได้รับ
-   - pros: ข้อดี 2-3 ข้อ
-   - cons: ข้อจำกัด/เงื่อนไขที่ต้องระวัง 1-2 ข้อ
-   - required_documents: เอกสารที่ต้องเตรียม
-   - recommendation_score: คะแนนแนะนำ 1-10 ตามความเหมาะสมกับโปรไฟล์นี้
-3. decision_note: เขียนหมายเหตุสั้นๆ สำหรับผู้รับบริการในการตัดสินใจเลือกสิทธิ์
+
+2. วิเคราะห์ความคุ้มค่า (Expected Value) ของสิทธิ์ใหม่แต่ละรายการ:
+   - eligibility_pct: โอกาสได้รับสิทธิ์ % (0-100) จากคุณสมบัติของผู้ลงทะเบียน
+   - value_baht: มูลค่าโดยประมาณ บาท/เดือน (ค่ากลางถ้าเป็นช่วง เช่น 600-1000 → 800)
+   - expected_value_baht = eligibility_pct / 100 × value_baht (ทศนิยม 1 ตำแหน่ง)
+   - expected_value_label: อ่านง่าย เช่น "~720 บาท/เดือน (90% × 800)"
+   - eligibility_label: สูงมาก (≥80%) / สูง (60-79%) / ปานกลาง (40-59%) / ต่ำ (<40%)
+   - recommendation_score: คะแนน 1-10 คิดจาก EV เทียบกันในกลุ่ม
+     สูตร: round( (EV ของสิทธิ์นี้ / EV สูงสุดในกลุ่ม) × 10 ) โดยขั้นต่ำ = 1
+     ถ้ามีสิทธิ์เดียว ให้ score = 10
+   - pros, cons, required_documents ตามปกติ
+   - เรียง benefit_analysis จาก EV สูงสุดไปต่ำสุด
+
+3. next_steps: ขั้นตอนการดำเนินการแยกตามสิทธิ์ที่แนะนำแต่ละรายการ
+   - แต่ละสิทธิ์มี steps เป็น list ขั้นตอนเรียงลำดับ เช่น ["เตรียมบัตรประชาชน", "ไปติดต่อ อปท.", ...]
+
+4. decision_note: อธิบายให้ผู้รับบริการเข้าใจว่าแต่ละสิทธิ์คุ้มค่าต่างกันอย่างไร
+   และถ้าต้องเลือก ควรเริ่มจากอันไหนก่อนและเพราะอะไร
 
 ตอบกลับในรูปแบบ JSON:
 {{
@@ -549,19 +588,33 @@ def run_agent_3_summary_with_value(ui_data: Dict[str, Any], agent2_result: Agent
   "status": "แนะนำสิทธิ์เพิ่มเติม หรือ ข้อมูลครบถ้วน ไม่มีสิทธิ์เพิ่มเติม",
   "benefit_analysis": [
     {{
-      "benefit_name":         "ชื่อสิทธิ์",
+      "benefit_name":         "ชื่อสิทธิ์ (EV สูงสุด)",
       "category":             "หมวดหมู่",
-      "eligibility_chance":   "สูงมาก",
-      "estimated_value":      "600-1,000 บาท/เดือน",
+      "eligibility_pct":      90.0,
+      "eligibility_label":    "สูงมาก",
+      "value_baht":           800.0,
+      "value_label":          "600-1,000 บาท/เดือน",
+      "expected_value_baht":  720.0,
+      "expected_value_label": "~720 บาท/เดือน (90% × 800)",
       "pros":                 ["ข้อดี 1", "ข้อดี 2"],
       "cons":                 ["ข้อจำกัด 1"],
       "required_documents":   ["เอกสาร 1", "เอกสาร 2"],
-      "recommendation_score": 9
+      "recommendation_score": 10
+    }}
+  ],
+  "next_steps": [
+    {{
+      "benefit_name": "ชื่อสิทธิ์",
+      "steps": [
+        "ขั้นตอนที่ 1: ...",
+        "ขั้นตอนที่ 2: ...",
+        "ขั้นตอนที่ 3: ..."
+      ]
     }}
   ],
   "recommended_actions": ["สิ่งที่เจ้าหน้าที่ต้องทำ 1", "สิ่งที่เจ้าหน้าที่ต้องทำ 2"],
   "summary_text": "บทสรุปสำหรับเจ้าหน้าที่...",
-  "decision_note": "หมายเหตุสำหรับผู้รับบริการในการตัดสินใจ..."
+  "decision_note": "สิทธิ์ A มี EV สูงกว่าสิทธิ์ B เพราะ... แนะนำให้เริ่มจาก..."
 }}
 """
 
@@ -627,52 +680,124 @@ def run_pipeline(ui_input_json: Dict[str, Any]) -> Optional[FinalSummaryOutput]:
 # ENTRY POINT
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    ui_input_json = {
-        "citizen_profile": {
-            "personal_information": {
-                "first_name":   "สมชาย",
-                "last_name":    "ใจดี",
-                "citizen_id":   "1234567890123",
-                "date_of_birth":"1958-10-09",
-                "age":          20,
-                "phone_number": "0812345678",
-            },
-            "address_information": {
-                "province":    "กรุงเทพมหานคร",
-                "district":    "จตุจักร",
-                "subdistrict": "ลาดยาว",
-                "postal_code": "10900",
-                "full_address":"123/4 หมู่บ้านสุขใจ",
-            },
-            "household_information": {
-                "household_members":  1,
-                "elderly":            1,
-                "children":           0,
-                "disabled_persons":   0,
-                "living_arrangement": "Living Alone",
-            },
-            "economic_information": {
-                "occupation":        "ว่างงาน",
-                "monthly_income":    1000,
-                "monthly_expense":   1500,
-                "employment_status": "Employed",
-            },
-            "vulnerable_groups": ["Elderly", "Low Income"],
-            "case_notes": "ต้องการความช่วยเหลือเรื่องค่าครองชีพ",
-        },
-        "structured_data": {
-            "case_type":      "welfare_intake",
-            "readiness_score": 50,
-            "generated_at":   "2026-06-18T10:30:00.000Z",
-            "officer_unit":   "หน่วยรับเรื่องสวัสดิการ",
-        },
-        "rag_context": {
-            "summary":  "ผู้สูงอายุอยู่ลำพัง รายได้ไม่เพียงพอต่อค่าใช้จ่าย",
-            "keywords": ["ผู้สูงอายุ", "อยู่ลำพัง", "รายได้น้อย"],
-        },
-    }
+# ---------------------------------------------------------------------------
+# MOCK TEST CASES — เลือก case ที่ต้องการทดสอบได้เลย
+# ---------------------------------------------------------------------------
 
+# Case 1: สมชาย — ผู้สูงอายุ รายได้น้อย (มีเบี้ยยังชีพอยู่แล้ว → เห็น overlap)
+CASE_SOMCHAI = {
+    "citizen_profile": {
+        "personal_information": {
+            "first_name": "สมชาย", "last_name": "ใจดี",
+            "citizen_id": "1234567890123",
+            "date_of_birth": "1958-10-09", "age": 68,
+            "phone_number": "0812345678",
+        },
+        "address_information": {
+            "province": "กรุงเทพมหานคร", "district": "จตุจักร",
+            "subdistrict": "ลาดยาว", "postal_code": "10900",
+            "full_address": "123/4 หมู่บ้านสุขใจ",
+        },
+        "household_information": {
+            "household_members": 1, "elderly": 1,
+            "children": 0, "disabled_persons": 0,
+            "living_arrangement": "Living Alone",
+        },
+        "economic_information": {
+            "occupation": "ว่างงาน", "monthly_income": 2000,
+            "monthly_expense": 3500, "employment_status": "Unemployed",
+        },
+        "vulnerable_groups": ["Elderly", "Low Income"],
+        "case_notes": "ต้องการความช่วยเหลือเรื่องค่าครองชีพ",
+    },
+    "structured_data": {"case_type": "welfare_intake", "readiness_score": 80,
+                        "generated_at": "2026-06-18T10:30:00.000Z", "officer_unit": "หน่วยรับเรื่องสวัสดิการ"},
+    "rag_context": {
+        "summary": "ผู้สูงอายุอยู่ลำพัง รายได้ไม่เพียงพอต่อค่าใช้จ่าย",
+        "keywords": ["ผู้สูงอายุ", "อยู่ลำพัง", "รายได้น้อย"],
+    },
+}
+
+# Case 2: มานี — ผู้สูงอายุพิการ รายได้น้อย ไม่มีสิทธิ์ใดเลย
+# → คาดว่าได้ 4+ สิทธิ์: เบี้ยยังชีพ, เบี้ยพิการ, บัตรสวัสดิการ, บัตรทอง
+CASE_MANEE = {
+    "citizen_profile": {
+        "personal_information": {
+            "first_name": "มานี", "last_name": "รักดี",
+            "citizen_id": "9876543210987",
+            "date_of_birth": "1955-03-22", "age": 71,
+            "phone_number": "0898765432",
+        },
+        "address_information": {
+            "province": "เชียงใหม่", "district": "เมืองเชียงใหม่",
+            "subdistrict": "ช้างคลาน", "postal_code": "50100",
+            "full_address": "99/1 ถนนนิมมานเหมินท์",
+        },
+        "household_information": {
+            "household_members": 2, "elderly": 2,
+            "children": 0, "disabled_persons": 1,
+            "living_arrangement": "With Spouse",
+        },
+        "economic_information": {
+            "occupation": "ว่างงาน", "monthly_income": 1500,
+            "monthly_expense": 4000, "employment_status": "Unemployed",
+        },
+        "vulnerable_groups": ["Elderly", "Disability", "Low Income"],
+        "case_notes": "ผู้สูงอายุพิการทางการเคลื่อนไหว ไม่มีสิทธิ์รักษาพยาบาล ไม่เคยลงทะเบียนสวัสดิการใดเลย",
+    },
+    "structured_data": {"case_type": "welfare_intake", "readiness_score": 90,
+                        "generated_at": "2026-06-18T10:30:00.000Z", "officer_unit": "หน่วยรับเรื่องสวัสดิการ"},
+    "rag_context": {
+        "summary": "ผู้สูงอายุพิการ รายได้น้อย ไม่มีสิทธิ์สวัสดิการและรักษาพยาบาลใดเลย",
+        "keywords": ["ผู้สูงอายุ", "พิการ", "รายได้น้อย", "รักษาพยาบาล", "บัตรสวัสดิการ"],
+    },
+}
+
+# Case 3: สมศรี — พิการ รายได้น้อย มีบางสิทธิ์อยู่แล้ว → เห็น overlap บางส่วน
+# → เบี้ยพิการ + บัตรทอง = Active แล้ว คาดว่าเหลือ: บัตรสวัสดิการ (Expired → ต่ออายุได้)
+CASE_SOMSRI = {
+    "citizen_profile": {
+        "personal_information": {
+            "first_name": "สมศรี", "last_name": "มีสุข",
+            "citizen_id": "1111111111111",
+            "date_of_birth": "1970-07-15", "age": 56,
+            "phone_number": "0812223344",
+        },
+        "address_information": {
+            "province": "ขอนแก่น", "district": "เมืองขอนแก่น",
+            "subdistrict": "ในเมือง", "postal_code": "40000",
+            "full_address": "44/2 ถนนมิตรภาพ",
+        },
+        "household_information": {
+            "household_members": 3, "elderly": 0,
+            "children": 1, "disabled_persons": 1,
+            "living_arrangement": "With Family",
+        },
+        "economic_information": {
+            "occupation": "รับจ้างทั่วไป", "monthly_income": 5000,
+            "monthly_expense": 6500, "employment_status": "Employed",
+        },
+        "vulnerable_groups": ["Disability", "Low Income"],
+        "case_notes": "พิการทางสายตา มีบัตรคนพิการแล้ว รายได้ไม่เพียงพอ บัตรสวัสดิการหมดอายุต้องต่ออายุ",
+    },
+    "structured_data": {"case_type": "welfare_intake", "readiness_score": 70,
+                        "generated_at": "2026-06-18T10:30:00.000Z", "officer_unit": "หน่วยรับเรื่องสวัสดิการ"},
+    "rag_context": {
+        "summary": "คนพิการรายได้น้อย มีสิทธิ์บางส่วนอยู่แล้ว ต้องการตรวจสอบสิทธิ์เพิ่มเติม",
+        "keywords": ["พิการ", "รายได้น้อย", "บัตรสวัสดิการ", "รักษาพยาบาล"],
+    },
+}
+
+# ---------------------------------------------------------------------------
+# เลือก case ที่ต้องการรัน (เปลี่ยนตรงนี้)
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    # ── เปลี่ยน ACTIVE_CASE เพื่อทดสอบ case อื่น ──
+    # ACTIVE_CASE = CASE_SOMCHAI   # ผู้สูงอายุ รายได้น้อย (มีบางสิทธิ์แล้ว)
+    # ACTIVE_CASE = CASE_MANEE       # ✅ ผู้สูงอายุพิการ ไม่มีสิทธิ์เลย → เห็นหลายสิทธิ์
+    ACTIVE_CASE = CASE_SOMSRI    # คนพิการ มีบางสิทธิ์ → เห็น overlap
+
+    ui_input_json = ACTIVE_CASE
     result = run_pipeline(ui_input_json)
 
     if result:
@@ -682,19 +807,31 @@ if __name__ == "__main__":
 
         # แสดง benefit analysis แบบอ่านง่าย
         if result.benefit_analysis:
-            print(f"\n📊 วิเคราะห์ความคุ้มค่า ({len(result.benefit_analysis)} สิทธิ์ที่แนะนำ):")
+            print(f"\n📊 วิเคราะห์ความคุ้มค่า — Expected Value ({len(result.benefit_analysis)} สิทธิ์):")
+            print(f"   {'สิทธิ์':<30} {'โอกาส':>8}  {'มูลค่า':>12}  {'EV':>14}  {'คะแนน':>6}")
+            print("   " + "-" * 75)
             for i, b in enumerate(result.benefit_analysis, 1):
-                print(f"\n  [{i}] {b.benefit_name} ({b.category})")
-                print(f"      โอกาสได้รับ : {b.eligibility_chance}")
-                print(f"      มูลค่าโดยประมาณ: {b.estimated_value}")
-                print(f"      คะแนนแนะนำ  : {b.recommendation_score}/10")
-                print(f"      ข้อดี       : {', '.join(b.pros)}")
-                print(f"      ข้อจำกัด    : {', '.join(b.cons)}")
+                print(f"   [{i}] {b.benefit_name:<26} {b.eligibility_pct:>6.0f}%  {b.value_baht:>9.0f} ฿  {b.expected_value_baht:>11.1f} ฿  {b.recommendation_score:>5}/10")
+
+            print()
+            for i, b in enumerate(result.benefit_analysis, 1):
+                print(f"  ── [{i}] {b.benefit_name} ({b.eligibility_label})  [{b.recommendation_score}/10]")
+                print(f"      EV             : {b.expected_value_label}")
+                print(f"      ข้อดี          : {', '.join(b.pros)}")
+                print(f"      ข้อจำกัด       : {', '.join(b.cons)}")
                 print(f"      เอกสารที่ต้องใช้: {', '.join(b.required_documents)}")
 
+        # แสดงขั้นตอนแยกตามสิทธิ์
+        if result.next_steps:
+            print(f"\n🗂️  ขั้นตอนการดำเนินการแต่ละสิทธิ์:")
+            for ns in result.next_steps:
+                print(f"\n  📌 {ns.benefit_name}")
+                for j, step in enumerate(ns.steps, 1):
+                    print(f"     {j}. {step}")
+
         print(f"\n📝 สรุป: {result.summary_text}")
-        print(f"\n💡 หมายเหตุสำหรับผู้รับบริการ:\n   {result.decision_note}")
-        print(f"\n✅ การดำเนินการต่อ:")
+        print(f"\n💡 คำแนะนำในการตัดสินใจ:\n   {result.decision_note}")
+        print(f"\n✅ สิ่งที่เจ้าหน้าที่ต้องดำเนินการต่อ:")
         for action in result.recommended_actions:
             print(f"   • {action}")
 

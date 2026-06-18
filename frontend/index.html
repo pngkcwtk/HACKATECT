@@ -103,46 +103,45 @@
               <p class="text-sm font-bold text-mso-secondary">รับข้อมูลเคสใหม่</p>
               <h2 class="mt-1 text-2xl font-black text-mso-primary">แบบฟอร์มบันทึกข้อมูลประชาชน</h2>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-mso-primary hover:bg-slate-50" onclick="showPage('dashboardPage')">กลับ</button>
-            </div>
+            <ul id="stepList" class="flex flex-wrap gap-x-6 gap-y-2 xl:justify-end"></ul>
           </div>
-          <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
-            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
-              <p class="text-sm font-black text-mso-primary">ความคืบหน้าการกรอกข้อมูล</p>
-              <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div id="progressBar" class="h-full rounded-full bg-mso-secondary transition-all" style="width: 14%"></div></div>
-              <p id="stepIndicator" class="mt-3 text-sm font-bold text-slate-600">ขั้นตอนที่ 1 จาก 7</p>
-              <ol id="stepList" class="mt-5 space-y-3 text-sm"></ol>
+          <div class="rounded-lg border border-slate-200 bg-white shadow-soft">
+            <div class="border-b border-slate-200 p-5">
+              <div class="flex items-center justify-between gap-3">
+                <p id="stepIndicator" class="text-sm font-bold text-mso-secondary"></p>
+              </div>
+              <div class="mt-3 h-2 w-full rounded-full bg-slate-100">
+                <div id="progressBar" class="h-2 rounded-full bg-mso-primary transition-all duration-300" style="width:0%"></div>
+              </div>
             </div>
-
-            <form id="caseForm" class="rounded-lg border border-slate-200 bg-white shadow-soft" novalidate>
-              <div class="wizard-step active p-5 lg:p-7" data-step="1">
+            <form id="caseForm" novalidate>
+              <div class="wizard-step p-5 lg:p-7" data-step="1">
                 <h3 class="text-xl font-black text-mso-primary">ข้อมูลส่วนบุคคล</h3>
                 <div class="mt-6 grid gap-4 md:grid-cols-2">
-                  <label class="block"><span class="text-sm font-bold">ชื่อ</span><input name="firstName" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block"><span class="text-sm font-bold">นามสกุล</span><input name="lastName" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block"><span class="text-sm font-bold">เลขบัตรประชาชน</span><input name="citizenId" required maxlength="13" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block"><span class="text-sm font-bold">วันเกิด</span><input name="dateOfBirth" type="date" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block"><span class="text-sm font-bold">อายุ</span><input name="age" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block"><span class="text-sm font-bold">เบอร์โทรศัพท์</span><input name="phone" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">ชื่อ</span><input name="firstName" type="text" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">นามสกุล</span><input name="lastName" type="text" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">เลขบัตรประชาชน</span><input name="citizenId" type="text" required maxlength="13" pattern="\d{13}" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">วันเกิด</span><input name="dateOfBirth" type="date" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">อายุ (ปี)</span><input name="age" type="number" min="0" max="150" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">เบอร์โทรศัพท์</span><input name="phone" type="tel" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
                 </div>
               </div>
 
               <div class="wizard-step p-5 lg:p-7" data-step="2">
                 <h3 class="text-xl font-black text-mso-primary">ข้อมูลที่อยู่</h3>
                 <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="block md:col-span-2"><span class="text-sm font-bold">ที่อยู่</span><input name="fullAddress" type="text" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
                   <label class="block"><span class="text-sm font-bold">จังหวัด</span><select name="province" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
                   <label class="block"><span class="text-sm font-bold">อำเภอ/เขต</span><select name="district" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
                   <label class="block"><span class="text-sm font-bold">ตำบล/แขวง</span><select name="subdistrict" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></select></label>
-                  <label class="block"><span class="text-sm font-bold">รหัสไปรษณีย์</span><input name="postalCode" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
-                  <label class="block md:col-span-2"><span class="text-sm font-bold">ที่อยู่เต็ม (ไม่บังคับ)</span><textarea name="fullAddress" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3"></textarea></label>
+                  <label class="block"><span class="text-sm font-bold">รหัสไปรษณีย์</span><input name="postalCode" type="text" readonly class="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-3" /></label>
                 </div>
               </div>
 
               <div class="wizard-step p-5 lg:p-7" data-step="3">
                 <h3 class="text-xl font-black text-mso-primary">ข้อมูลครัวเรือน</h3>
                 <div class="mt-6 grid gap-4 md:grid-cols-2">
-                  <label class="block"><span class="text-sm font-bold">จำนวนสมาชิกในครัวเรือน</span><input name="householdMembers" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
+                  <label class="block"><span class="text-sm font-bold">จำนวนสมาชิกในครัวเรือน</span><input name="householdMembers" type="number" min="1" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
                   <label class="block"><span class="text-sm font-bold">จำนวนผู้สูงอายุ</span><input name="elderlyCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
                   <label class="block"><span class="text-sm font-bold">จำนวนเด็ก</span><input name="childrenCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
                   <label class="block"><span class="text-sm font-bold">จำนวนผู้พิการ</span><input name="disabledCount" type="number" min="0" required class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-3" /></label>
@@ -219,7 +218,7 @@
                 <button type="button" id="prevBtn" class="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-mso-primary hover:bg-slate-50">ก่อนหน้า</button>
                 <div class="flex flex-col gap-3 sm:flex-row">
                   <button type="button" id="nextBtn" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-slate-800">ถัดไป</button>
-                  <button type="button" id="sendBtn" class="hidden rounded-lg bg-mso-success px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-green-600">ส่งข้อมูล</button>
+                  <button type="button" id="sendBtn" class="hidden rounded-lg bg-mso-success px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-green-600">ส่งข้อมูลและวิเคราะห์สิทธิ์ →</button>
                 </div>
               </div>
             </form>
@@ -229,21 +228,71 @@
     </main>
   </div>
 
-  <div id="successModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 p-4">
-    <div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-soft">
-      <div class="flex items-start justify-between gap-4">
+  <!-- ── Result Modal: แสดงผล Pipeline ── -->
+  <div id="resultModal" class="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/60 p-4 py-8">
+    <div class="w-full max-w-3xl rounded-xl bg-slate-50 shadow-soft">
+
+      <!-- Header -->
+      <div class="flex items-start justify-between gap-4 rounded-t-xl bg-mso-primary p-6">
         <div>
-          <p class="text-sm font-bold text-mso-success">สำเร็จ</p>
-          <h3 class="mt-1 text-xl font-black text-mso-primary">ส่งข้อมูลเรียบร้อยแล้ว</h3>
-          <p class="mt-2 text-sm leading-6 text-slate-600">สามารถรับเรื่องถัดไปได้ทันที</p>
+          <p class="text-sm font-bold text-blue-200">ผลการวิเคราะห์สวัสดิการ</p>
+          <h3 id="resultName" class="mt-1 text-xl font-black text-white"></h3>
+          <span id="resultStatus" class="mt-2 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white"></span>
         </div>
-        <button id="closeModal" class="rounded-lg border border-slate-200 p-2 text-slate-500" aria-label="ปิดหน้าต่าง">x</button>
+        <button id="closeResultModal" class="rounded-lg border border-white/30 p-2 text-white hover:bg-white/10" aria-label="ปิด">✕</button>
       </div>
-      <div class="mt-5 flex justify-end">
-        <button id="finishSubmitBtn" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft">เสร็จสิ้น</button>
+
+      <div class="space-y-5 p-6">
+
+        <!-- Benefit Analysis -->
+        <section>
+          <h4 class="text-sm font-black uppercase tracking-wide text-mso-secondary">📊 วิเคราะห์ความคุ้มค่า (Expected Value)</h4>
+          <div id="resultBenefitAnalysis" class="mt-3 space-y-3"></div>
+        </section>
+
+        <!-- Next Steps -->
+        <section>
+          <h4 class="text-sm font-black uppercase tracking-wide text-mso-secondary">🗂️ ขั้นตอนการดำเนินการแต่ละสิทธิ์</h4>
+          <div id="resultNextSteps" class="mt-3 space-y-3"></div>
+        </section>
+
+        <!-- Decision Note -->
+        <section class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <p class="text-xs font-black uppercase tracking-wide text-mso-secondary">💡 คำแนะนำในการตัดสินใจ</p>
+          <p id="resultDecisionNote" class="mt-2 text-sm leading-6 text-slate-700"></p>
+        </section>
+
+        <!-- Summary -->
+        <section class="rounded-lg border border-slate-200 bg-white p-4">
+          <p class="text-xs font-black uppercase tracking-wide text-slate-500">📝 บทสรุปสำหรับเจ้าหน้าที่</p>
+          <p id="resultSummaryText" class="mt-2 text-sm leading-6 text-slate-700"></p>
+        </section>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button onclick="closeResultModal()" class="rounded-lg border border-slate-300 px-5 py-3 text-sm font-bold text-mso-primary hover:bg-slate-100">รับเคสถัดไป</button>
+          <button id="finishResultBtn" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white shadow-soft hover:bg-slate-800">กลับแดชบอร์ด</button>
+        </div>
       </div>
     </div>
   </div>
-</body>
 
+  <!-- ── Error Modal ── -->
+  <div id="errorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-soft">
+      <div class="flex items-start gap-4">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-50 text-xl">⚠️</div>
+        <div class="flex-1">
+          <h3 class="font-black text-mso-primary">เกิดข้อผิดพลาด</h3>
+          <p id="errorMessage" class="mt-2 text-sm leading-6 text-slate-600"></p>
+          <p class="mt-2 text-xs text-slate-400">กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่ที่ localhost:8000</p>
+        </div>
+        <button id="closeErrorModal" class="text-slate-400 hover:text-slate-600">✕</button>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button onclick="closeErrorModal()" class="rounded-lg bg-mso-primary px-5 py-3 text-sm font-bold text-white">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+</body>
 </html>

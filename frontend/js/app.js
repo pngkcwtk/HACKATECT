@@ -1,5 +1,8 @@
 ﻿window.tailwind = window.tailwind || {};
 
+// URL ของ FastAPI backend — เปลี่ยนเป็น domain จริงตอน deploy
+const API_BASE_URL = 'http://localhost:8000';
+
 // ตั้งค่า theme เพิ่มเติมให้ Tailwind CDN ใช้สีและเงาตามดีไซน์ของระบบ
 tailwind.config = {
       theme: {
@@ -558,21 +561,131 @@ document.addEventListener('DOMContentLoaded', () => {
       // เปิดให้ HTML inline onclick เรียกเปลี่ยนหน้าได้
       window.showPage = showPage;
       
-      // จำลองการส่งข้อมูลเข้า backend/ระบบภายใน แล้วล้างฟอร์มเพื่อรับเคสถัดไป
-      function submitCase(payload) {
-        console.log('ข้อมูลที่ส่งต่อระบบภายใน:', payload);
-        form.reset();
+      // ส่งข้อมูลไป FastAPI backend และแสดงผลลัพธ์ Multi-Agent Pipeline
+      async function submitCase(payload) {
+        // แสดง loading state บนปุ่มส่ง
+        const sendBtn = document.getElementById('sendBtn');
+        const originalText = sendBtn.textContent;
+        sendBtn.disabled = true;
+        sendBtn.textContent = '⏳ กำลังวิเคราะห์สิทธิ์...';
 
-          // เติม dropdown ใหม่หลังล้างฟอร์ม เพื่อพร้อมรับเคสถัดไป
-        populateStaticDropdowns();
-        currentStep = 1;
-        updateWizard();
-        document.getElementById('successModal').classList.remove('hidden');
-        document.getElementById('successModal').classList.add('flex');
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.detail || `Server error ${response.status}`);
+          }
+
+          const result = await response.json();
+
+          if (!result.success || !result.data) {
+            throw new Error('ได้รับข้อมูลไม่ครบถ้วนจากเซิร์ฟเวอร์');
+          }
+
+          // รีเซ็ตฟอร์มแล้วแสดงผลลัพธ์
+          form.reset();
+          populateStaticDropdowns();
+          currentStep = 1;
+          updateWizard();
+          showResultModal(result.data);
+
+        } catch (error) {
+          console.error('submitCase error:', error);
+          showErrorModal(error.message);
+        } finally {
+          sendBtn.disabled = false;
+          sendBtn.textContent = originalText;
+        }
       }
-  
+
       // เผื่อระบบภายนอกหรือ console ต้องเรียกส่งข้อมูลซ้ำระหว่าง demo
       window.submitCase = submitCase;
+
+      // ── แสดง modal ผลลัพธ์ Pipeline ──
+      function showResultModal(data) {
+        const modal = document.getElementById('resultModal');
+
+        // Header
+        document.getElementById('resultName').textContent = data.citizen_name || '';
+        document.getElementById('resultStatus').textContent = data.status || '';
+
+        // Benefit analysis cards
+        const analysisContainer = document.getElementById('resultBenefitAnalysis');
+        if (data.benefit_analysis && data.benefit_analysis.length > 0) {
+          // เรียงจาก recommendation_score สูงสุด
+          const sorted = [...data.benefit_analysis].sort((a, b) => b.recommendation_score - a.recommendation_score);
+          analysisContainer.innerHTML = sorted.map((b, i) => {
+            const scoreColor = b.recommendation_score >= 8 ? 'text-green-600' : b.recommendation_score >= 5 ? 'text-amber-600' : 'text-slate-500';
+            const chanceBadge = b.eligibility_label === 'สูงมาก' ? 'bg-green-50 text-green-700' :
+                                b.eligibility_label === 'สูง'    ? 'bg-blue-50 text-blue-700' :
+                                b.eligibility_label === 'ปานกลาง'? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600';
+            const pros  = (b.pros  || []).map(p => `<li class="flex gap-2"><span class="text-green-500 shrink-0">✓</span>${p}</li>`).join('');
+            const cons  = (b.cons  || []).map(c => `<li class="flex gap-2"><span class="text-amber-500 shrink-0">⚠</span>${c}</li>`).join('');
+            const docs  = (b.required_documents || []).map(d => `<span class="rounded bg-slate-100 px-2 py-0.5 text-xs">${d}</span>`).join('');
+            return `
+              <div class="rounded-lg border border-slate-200 bg-white p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="font-black text-mso-primary">${i + 1}. ${b.benefit_name}</p>
+                    <span class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${chanceBadge}">${b.eligibility_label} (${b.eligibility_pct}%)</span>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="text-2xl font-black ${scoreColor}">${b.recommendation_score}<span class="text-sm font-bold text-slate-400">/10</span></p>
+                    <p class="text-xs text-slate-500">คะแนนแนะนำ</p>
+                  </div>
+                </div>
+                <div class="mt-3 rounded-lg bg-blue-50 px-3 py-2">
+                  <p class="text-xs font-bold text-mso-secondary">Expected Value</p>
+                  <p class="mt-0.5 font-black text-mso-primary">${b.expected_value_label}</p>
+                  <p class="text-xs text-slate-500">${b.value_label}</p>
+                </div>
+                ${pros ? `<ul class="mt-3 space-y-1 text-sm text-slate-700">${pros}</ul>` : ''}
+                ${cons ? `<ul class="mt-2 space-y-1 text-sm text-slate-700">${cons}</ul>` : ''}
+                ${docs ? `<div class="mt-3 flex flex-wrap gap-1">${docs}</div>` : ''}
+              </div>`;
+          }).join('');
+        } else {
+          analysisContainer.innerHTML = '<p class="text-sm text-slate-500">ไม่พบสิทธิ์ใหม่ที่แนะนำ</p>';
+        }
+
+        // Next steps
+        const stepsContainer = document.getElementById('resultNextSteps');
+        if (data.next_steps && data.next_steps.length > 0) {
+          stepsContainer.innerHTML = data.next_steps.map(ns => `
+            <div class="rounded-lg border border-slate-200 bg-white p-4">
+              <p class="font-black text-mso-primary">📌 ${ns.benefit_name}</p>
+              <ol class="mt-3 space-y-2 text-sm text-slate-700 list-none">
+                ${(ns.steps || []).map((s, i) => `
+                  <li class="flex gap-3">
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-mso-primary text-xs font-black text-white">${i + 1}</span>
+                    <span class="pt-0.5">${s}</span>
+                  </li>`).join('')}
+              </ol>
+            </div>`).join('');
+        } else {
+          stepsContainer.innerHTML = '<p class="text-sm text-slate-500">ไม่มีขั้นตอนเพิ่มเติม</p>';
+        }
+
+        // Decision note + summary
+        document.getElementById('resultDecisionNote').textContent = data.decision_note || '';
+        document.getElementById('resultSummaryText').textContent  = data.summary_text  || '';
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      // ── แสดง error modal ──
+      function showErrorModal(message) {
+        const modal = document.getElementById('errorModal');
+        document.getElementById('errorMessage').textContent = message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
       
       // ปิด sidebar บนมือถือและ overlay
       function closeMobileMenu() {
@@ -609,18 +722,21 @@ document.addEventListener('DOMContentLoaded', () => {
         submitCase(buildPayload());
       });
 
-      // ปุ่มปิด modal หลังส่งข้อมูลสำเร็จ
-      document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('successModal').classList.add('hidden');
-        document.getElementById('successModal').classList.remove('flex');
-      });
+      // ปุ่มปิด modal ผลลัพธ์ (result modal)
+      function closeResultModal() {
+        document.getElementById('resultModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.remove('flex');
+      }
+      function closeErrorModal() {
+        document.getElementById('errorModal').classList.add('hidden');
+        document.getElementById('errorModal').classList.remove('flex');
+      }
+      window.closeResultModal = closeResultModal;
+      window.closeErrorModal  = closeErrorModal;
 
-      // ปุ่มเสร็จสิ้นใน modal: กลับไป dashboard เพื่อรับเคสถัดไป
-      document.getElementById('finishSubmitBtn').addEventListener('click', () => {
-        document.getElementById('successModal').classList.add('hidden');
-        document.getElementById('successModal').classList.remove('flex');
-        showPage('dashboardPage');
-      });
+      document.getElementById('closeResultModal').addEventListener('click', closeResultModal);
+      document.getElementById('finishResultBtn').addEventListener('click', () => { closeResultModal(); showPage('dashboardPage'); });
+      document.getElementById('closeErrorModal').addEventListener('click', closeErrorModal);
 
       // ปุ่มเปิด/ปิดแผงรายละเอียดเคสล่าสุด เพื่อลดสิ่งรบกวนบน dashboard
       document.getElementById('toggleCaseInsightBtn').addEventListener('click', () => {
