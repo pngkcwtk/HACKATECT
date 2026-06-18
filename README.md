@@ -61,8 +61,8 @@ HACKATECT/
 ### 1. Clone และติดตั้ง dependencies
 
 ```bash
-git clone -b tiya https://github.com/pngkcwtk/HACKATECT.git
-cd HACKATECT
+git clone -b tiya https://github.com/pngkcwtk/Welfare-Gap-Finder.git
+cd Welfare-Gap-Finder
 pip install fastapi uvicorn pydantic openai python-dotenv numpy scikit-learn
 ```
 
