@@ -1,0 +1,11 @@
+benefit_id,benefit_name,source_system,check_type
+1,เบี้ยยังชีพผู้สูงอายุ,eSocial,received_benefit
+2,เบี้ยความพิการ,eSocial,received_benefit
+3,เงินอุดหนุนเพื่อการเลี้ยงดูเด็กแรกเกิด,eSocial,received_benefit
+4,บัตรสวัสดิการแห่งรัฐ,eSocial,received_benefit
+5,สิทธิหลักประกันสุขภาพแห่งชาติ,HealthcareRights,current_right
+6,สิทธิประกันสังคม,HealthcareRights,current_right
+7,สิทธิรักษาพยาบาลข้าราชการ,HealthcareRights,current_right
+8,สถานพยาบาลประจำสิทธิรักษาพยาบาล,HealthcareRights,current_right
+9,สถานะผู้มีสิทธิบัตรสวัสดิการแห่งรัฐ 2569,StateWelfare,eligibility_status
+10,สถานะการลงทะเบียนสวัสดิการแห่งรัฐ 2569,StateWelfare,registration_status
