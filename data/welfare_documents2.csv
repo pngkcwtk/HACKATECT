@@ -1,0 +1,10 @@
+document_id,benefit_id,benefit_name,category,min_age,max_age,max_annual_income
+1,1,เบี้ยยังชีพผู้สูงอายุ,Elderly,60,,
+2,2,เบี้ยความพิการ,Disability,0,,
+3,3,เงินอุดหนุนเพื่อการเลี้ยงดูเด็กแรกเกิด,Child Welfare,0,6,100000
+4,4,บัตรสวัสดิการแห่งรัฐ,Financial Support,18,,100000
+5,5,สิทธิหลักประกันสุขภาพแห่งชาติ,Healthcare,0,,
+6,6,สิทธิประกันสังคม,Healthcare,15,,
+7,7,สิทธิรักษาพยาบาลข้าราชการ,Healthcare,,,
+8,8,สถานะผู้มีสิทธิบัตรสวัสดิการแห่งรัฐ 2569,Financial Support,18,,100000
+9,9,สถานะการลงทะเบียนสวัสดิการแห่งรัฐ 2569,Financial Support,18,,100000
