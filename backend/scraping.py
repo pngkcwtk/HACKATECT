@@ -165,10 +165,10 @@ def scrape_med(browser, citizen_id: str):
             has_right = ("ไม่พบเลขบัตรประชาชน" not in result_text) or ("ไม่มีสิทธิ" not in result_text)
 
             for b in benefits:
-                status = "มีสิทธิ" if ((has_right) and (b in result_text)) else "ไม่มีสิทธิ2"
+                status = "มีสิทธิ" if ((has_right) and (b in result_text)) else "ไม่มีสิทธิ"
                 rows.append({"benefit_name": b, "source_system": "HealthcareRights", "status": status})
         except Exception as e:
-            for b in benefits: rows.append({"benefit_name": b, "source_system": "HealthcareRights", "status": "ไม่มีสิทธิ1"})
+            for b in benefits: rows.append({"benefit_name": b, "source_system": "HealthcareRights", "status": "ไม่มีสิทธิ"})
             print(f"Exception : {e}")
     else:
         print("อ่านข้อมูลไม่สำเร็จ ตอบกลับไม่มีสิทธิ")
