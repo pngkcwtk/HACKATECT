@@ -117,7 +117,7 @@ def scrape_state(browser, citizen_id: str):
         page.close()
     return rows
 
-def get_all_scrap_data(citizen_id: str) -> pd.DataFrame:
+def get_all_data(citizen_id: str) -> pd.DataFrame:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         print(f'🚀 เริ่มต้นทำงานตรวจสอบแบบรวมศูนย์สิทธิ์...')
@@ -144,4 +144,4 @@ def get_all_scrap_data(citizen_id: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     mock_citizen_id = "1210101147372"
-    get_all_scrap_data(mock_citizen_id)
+    get_all_data(mock_citizen_id)
