@@ -1,155 +1,198 @@
-# 🏛️ Welfare Gap Finder
+# Welfare Gap Finder
 
-ระบบ AI ผู้ช่วยเจ้าหน้าที่สังคมสงเคราะห์ สำหรับวิเคราะห์ **"ช่องว่างสวัสดิการ"** ของประชาชนแต่ละคน — ค้นหาว่าใครควรได้รับสิทธิ์อะไรเพิ่ม โดยใช้ Multi-Agent Pipeline ร่วมกับ RAG (Retrieval-Augmented Generation) และ Typhoon LLM
+ระบบผู้ช่วยเจ้าหน้าที่สังคมสงเคราะห์สำหรับค้นหา "ช่องว่างสวัสดิการ" ของประชาชนแต่ละราย โดยรับข้อมูลจากหน้าเว็บ ส่งไปยัง FastAPI backend แล้วให้ Multi-Agent Pipeline วิเคราะห์สิทธิ์ที่เกี่ยวข้อง สิทธิ์ที่อาจซ้ำซ้อน และขั้นตอนแนะนำถัดไป
 
-โปรเจกต์นี้พัฒนาขึ้นในงาน Hackathon (HACKATECT) เพื่อแก้ปัญหาประชาชนที่ "ตกหล่น" จากสวัสดิการที่ตนเองมีสิทธิ์ได้รับ แต่ไม่รู้ตัว หรือเจ้าหน้าที่ไม่มีเวลาตรวจสอบสิทธิ์ซ้ำซ้อนทีละราย
+โปรเจกต์นี้พัฒนาสำหรับงาน HACKATECT เพื่อช่วยลดภาระการตรวจสอบสวัสดิการหลายรายการด้วยมือ และช่วยให้เจ้าหน้าที่เห็นภาพรวมของเคสได้เร็วขึ้น
 
----
-## ✨ ภาพรวมระบบ
+## ภาพรวมระบบ
 
-ผู้ใช้ (เจ้าหน้าที่) กรอกข้อมูลประชาชนผ่านหน้าเว็บ → ระบบส่งข้อมูลไปยัง Backend → รัน Multi-Agent Pipeline 3 ขั้นตอน → คืนผลวิเคราะห์สวัสดิการที่แนะนำ พร้อมขั้นตอนการขอสิทธิ์ กลับมาแสดงผลที่หน้าเว็บ
-
-```
-┌─────────────┐      ┌──────────────────┐      ┌────────────────────────────┐
-│   Frontend   │ ───▶ │  FastAPI Backend  │ ───▶ │   Multi-Agent Pipeline      │
-│ (HTML/CSS/JS)│ ◀─── │     (main.py)     │ ◀─── │ (welfare_agent_pipeline.py) │
-└─────────────┘      └──────────────────┘      └────────────────────────────┘
-                                                          │
-                                  ┌───────────────────────┼───────────────────────┐
-                                  ▼                       ▼                       ▼
-                          Agent 1: RAG          Agent 2: ตรวจสอบสิทธิ์      Agent 3: สรุปผล +
-                       (จับคู่สวัสดิการ            ซ้ำซ้อนกับฐานข้อมูล         วิเคราะห์ความคุ้มค่า
-                        ที่เกี่ยวข้อง)              สิทธิ์ที่มีอยู่             (Expected Value)
+```text
+Frontend (HTML/CSS/JS)
+        |
+        v
+FastAPI Backend (main.py)
+        |
+        v
+Multi-Agent Pipeline (Backend_backup/welfare_agent_pipeline.py)
+        |
+        +-- Agent 1: RAG Retrieval / Policy Matching
+        +-- Agent 2: ตรวจสอบสิทธิ์ซ้ำซ้อน
+        +-- Agent 3: สรุปผลและวิเคราะห์ความคุ้มค่า
 ```
 
-### Multi-Agent Pipeline
+Pipeline ใช้ Typhoon LLM ผ่าน OpenAI-compatible client และใช้ข้อมูลสวัสดิการจากไฟล์ CSV ในโฟลเดอร์ `data/`
 
-| Agent | หน้าที่ |
-|---|---|
-| **Agent 1 — RAG Retrieval** | ค้นหาสวัสดิการที่เกี่ยวข้องกับโปรไฟล์ประชาชน จากฐานข้อมูลสวัสดิการ (TF-IDF + Cosine Similarity) |
-| **Agent 2 — DB Verification** | ตรวจสอบว่าประชาชนมีสิทธิ์ใดอยู่แล้ว เพื่อกรองรายการที่ซ้ำซ้อนออก |
-| **Agent 3 — Summary & Value Analysis** | วิเคราะห์ความคุ้มค่า (ข้อดี/ข้อจำกัด/เอกสารที่ต้องใช้) และสรุปขั้นตอนการขอสิทธิ์แต่ละรายการ |
+## ความสามารถหลัก
 
-Pipeline ขับเคลื่อนด้วย **Typhoon LLM** (`typhoon-v2.5-30b-a3b-instruct`) ผ่าน [OpenTyphoon API](https://opentyphoon.ai/)
+- บันทึกข้อมูลประชาชนผ่านหน้าเว็บสำหรับเจ้าหน้าที่
+- แสดง dashboard และรายการเคสตัวอย่าง
+- วิเคราะห์สิทธิ์สวัสดิการจากข้อมูลส่วนบุคคล ครัวเรือน รายได้ และกลุ่มเปราะบาง
+- ค้นหาสวัสดิการที่เกี่ยวข้องด้วย TF-IDF และ Cosine Similarity
+- สรุปผลเป็นภาษาไทย พร้อมเหตุผลและขั้นตอนดำเนินการต่อ
 
----
+## โครงสร้างโปรเจกต์
 
-## 📂 โครงสร้างโปรเจกต์
-
-```
+```text
 HACKATECT/
-├── main.py                      # FastAPI backend entry point
-├── welfare_agent_pipeline.py    # Multi-Agent Pipeline หลัก (RAG + LLM agents)
-├── example.env                  # ตัวอย่างไฟล์ environment variable
+├── main.py                         # FastAPI backend entry point
+├── welfare_agent_pipeline.py       # pipeline เวอร์ชันหลักอีกชุดหนึ่ง
+├── requirements.txt                # Python dependencies
+├── example.env                     # ตัวอย่างไฟล์ environment variables
 ├── data/
-│   ├── welfare_documents.csv        # ฐานข้อมูลสวัสดิการ (ใช้ทำ RAG)
-│   └── benefit_source_mapping.csv   # mapping สิทธิ์ ↔ ระบบ/หน่วยงานต้นทาง
+│   ├── welfare_documents.csv       # ฐานข้อมูลสวัสดิการสำหรับ RAG
+│   └── benefit_source_mapping.csv  # mapping สิทธิ์กับแหล่งข้อมูล/หน่วยงาน
 ├── frontend/
-│   ├── index.html               # หน้าเว็บฟอร์มกรอกข้อมูลประชาชน
-│   ├── css/styles.css
+│   ├── index.html                  # หน้าเว็บหลัก
+│   ├── css/styles.css              # stylesheet
 │   └── js/
-│       ├── app.js                # ฟอร์ม + เรียก API + แสดงผลวิเคราะห์
-│       └── thai-address-data.js  # ข้อมูลจังหวัด/อำเภอ/ตำบลของไทย
-└── Backend_backup/               # ไฟล์เวอร์ชันก่อนหน้า / เก็บสำรอง
+│       ├── app.js                  # frontend logic และ API call
+│       └── thai-address-data.js    # ข้อมูลที่อยู่ไทย
+└── Backend_backup/
+    └── welfare_agent_pipeline.py   # pipeline ที่ main.py ใช้งานอยู่
 ```
 
----
+> หมายเหตุ: `main.py` ปัจจุบัน import pipeline จาก `Backend_backup/welfare_agent_pipeline.py`
 
-## 🚀 วิธีติดตั้งและรัน
+## การติดตั้ง
 
-### 1. Clone และติดตั้ง dependencies
+### 1. สร้าง virtual environment
 
-```bash
-git clone -b tiya https://github.com/pngkcwtk/Welfare-Gap-Finder.git
-cd Welfare-Gap-Finder
-pip install fastapi uvicorn pydantic openai python-dotenv numpy scikit-learn
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 2. ตั้งค่า Environment Variable
+### 2. ติดตั้ง dependencies
 
-คัดลอก `example.env` เป็น `.env` แล้วใส่ Typhoon API Key ของคุณ:
-
-```bash
-cp example.env .env
+```powershell
+pip install -r requirements.txt
 ```
+
+### 3. ตั้งค่า API key
+
+คัดลอกไฟล์ตัวอย่างเป็น `.env`
+
+```powershell
+Copy-Item example.env .env
+```
+
+จากนั้นแก้ค่าใน `.env`
 
 ```env
 TYPHOON_API_KEY="your_typhoon_api_key_here"
 ```
 
-> สามารถขอ API Key ได้ที่ [opentyphoon.ai](https://opentyphoon.ai/)
+สามารถขอ API key ได้จาก [OpenTyphoon](https://opentyphoon.ai/)
 
-### 3. รัน Backend
+## วิธีรัน
 
-```bash
+### รัน backend
+
+```powershell
 uvicorn main:app --reload --port 8000
 ```
 
-เมื่อรันสำเร็จ ตรวจสอบได้ที่ `http://localhost:8000` ควรเห็นข้อความ `"status": "ok"`
+ตรวจสอบ health check ได้ที่:
 
-### 4. เปิด Frontend
+```text
+http://localhost:8000/
+```
 
-เปิดไฟล์ `frontend/index.html` ผ่าน Live Server หรือ local HTTP server (เช่น VS Code Live Server extension) — **ไม่แนะนำให้เปิดไฟล์ตรงๆแบบ `file://`** เพราะอาจมีปัญหา CORS
+ถ้าระบบพร้อมใช้งานจะได้ response ลักษณะนี้:
 
----
-
-## 🔌 API Endpoint
-
-### `POST /api/analyze`
-
-วิเคราะห์ข้อมูลประชาชนและคืนคำแนะนำสวัสดิการ
-
-**Request Body:**
 ```json
 {
-  "citizen_profile": { "...": "ข้อมูลส่วนตัว/ที่อยู่ของประชาชน" },
-  "structured_data": { "...": "ข้อมูลโครงสร้าง เช่น รายได้ อาชีพ" },
-  "rag_context": { "...": "บริบทเพิ่มเติมสำหรับค้นหาสวัสดิการ" }
+  "status": "ok",
+  "message": "Welfare Gap Finder API พร้อมใช้งาน"
 }
 ```
 
-**Response:**
+### เปิด frontend
+
+เปิดไฟล์ `frontend/index.html` ผ่าน local web server เช่น VS Code Live Server หรือรัน server แบบง่ายจากโฟลเดอร์ `frontend`
+
+```powershell
+cd frontend
+python -m http.server 5500
+```
+
+จากนั้นเปิด:
+
+```text
+http://localhost:5500/
+```
+
+Frontend จะเรียก backend ที่ `http://localhost:8000` ตามค่าที่ตั้งไว้ใน `frontend/js/app.js`
+
+## API
+
+### `GET /`
+
+ใช้ตรวจสอบว่า backend พร้อมทำงานหรือไม่
+
+### `POST /api/analyze`
+
+รับข้อมูลเคสจาก frontend แล้วส่งเข้า Multi-Agent Pipeline
+
+ตัวอย่าง request body:
+
 ```json
 {
-  "success": true,
-  "data": {
-    "benefit_analysis": [ "...รายการสวัสดิการที่แนะนำ พร้อมคะแนนความคุ้มค่า..." ],
-    "next_steps": [ "...ขั้นตอนการขอสิทธิ์แต่ละรายการ..." ],
-    "recommended_actions": [ "...สิ่งที่เจ้าหน้าที่ควรทำต่อ..." ],
-    "summary_text": "บทสรุปสำหรับเจ้าหน้าที่",
-    "decision_note": "เหตุผลในการจัดลำดับความสำคัญของสิทธิ์"
+  "citizen_profile": {
+    "personal_information": {
+      "first_name": "สมชาย",
+      "last_name": "ประเสริฐ"
+    }
+  },
+  "structured_data": {
+    "monthly_income": 2000,
+    "household_members": 1,
+    "vulnerable_groups": ["Elderly", "Low Income"]
+  },
+  "rag_context": {
+    "notes": "ผู้สูงอายุอยู่ลำพัง รายได้ต่ำ"
   }
 }
 ```
 
-### `GET /`
+ตัวอย่าง response:
 
-Health check — ตรวจสอบว่า server พร้อมใช้งาน
+```json
+{
+  "success": true,
+  "data": {
+    "citizen_name": "สมชาย ประเสริฐ",
+    "status": "แนะนำสิทธิ์เพิ่มเติม",
+    "benefit_analysis": [],
+    "next_steps": [],
+    "recommended_actions": []
+  },
+  "error": null
+}
+```
 
----
+## การทดสอบแบบ standalone
 
-## 🛠️ เทคโนโลยีที่ใช้
+สามารถรัน pipeline โดยตรงได้ด้วยคำสั่ง:
 
-- **Backend:** FastAPI, Pydantic, Uvicorn
-- **AI / LLM:** Typhoon (`typhoon-v2.5-30b-a3b-instruct`) ผ่าน OpenAI-compatible client
-- **RAG:** TF-IDF Vectorization + Cosine Similarity (scikit-learn)
-- **Frontend:** HTML, CSS, Vanilla JavaScript
-- **Data:** CSV-based ฐานข้อมูลสวัสดิการ
-
----
-
-## 🧪 การทดสอบ
-
-ในไฟล์ `welfare_agent_pipeline.py` มี mock test case ตัวอย่าง (เช่น กรณี "สมชาย" ผู้สูงอายุที่มีเบี้ยยังชีพอยู่แล้ว) สามารถรันไฟล์ตรงๆ เพื่อทดสอบ pipeline แบบ standalone โดยไม่ต้องผ่าน frontend ได้:
-
-```bash
+```powershell
 python welfare_agent_pipeline.py
 ```
 
-> 💡 Tip: เปิด Browser DevTools (กด `F12` → แท็บ Console) ขณะใช้งานหน้าเว็บ เพื่อดู payload JSON ที่ส่งไปยัง backend ผ่าน `console.log`
+หรือทดสอบ backend ผ่าน Swagger UI หลังจากรัน `uvicorn` แล้ว:
 
----
+```text
+http://localhost:8000/docs
+```
 
-## 📄 License
+## เทคโนโลยีที่ใช้
 
-โปรเจกต์นี้อยู่ภายใต้ [MIT License](LICENSE)
+- Backend: FastAPI, Uvicorn, Pydantic
+- AI/LLM: Typhoon ผ่าน OpenAI-compatible API
+- RAG: scikit-learn, TF-IDF, Cosine Similarity
+- Data: CSV
+- Frontend: HTML, CSS, Vanilla JavaScript, Tailwind CDN
+
+## License
+
+โปรเจกต์นี้เผยแพร่ภายใต้ [MIT License](LICENSE)
